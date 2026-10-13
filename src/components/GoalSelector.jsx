@@ -19,7 +19,8 @@ import {
   Award, 
   BookOpen, 
   FileText, 
-  ShieldCheck 
+  ShieldCheck,
+  ChevronDown 
 } from "lucide-react";
 import { MSU_NAAWAN_PROGRAMS, MSU_CAREER_TRACKS } from "../data/courses";
 
@@ -114,41 +115,83 @@ export function GoalSelector({
           </div>
         </div>
 
-        {/* Program Selection Pills */}
+        {/* Academic Prospectus Dropdown Selector */}
         <div style={{ marginTop: "1rem" }}>
-          <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: 700, marginBottom: "0.4rem" }}>
+          <label 
+            htmlFor="prospectus-dropdown"
+            style={{ 
+              display: "block",
+              fontSize: "0.72rem", 
+              color: "var(--text-muted)", 
+              textTransform: "uppercase", 
+              fontWeight: 700, 
+              marginBottom: "0.45rem",
+              letterSpacing: "0.05em"
+            }}
+          >
             Select Academic Prospectus:
-          </div>
-          <div style={{ display: "flex", gap: "0.5rem", overflowX: "auto", paddingBottom: "4px" }}>
-            {MSU_NAAWAN_PROGRAMS.map(prog => {
-              const isSelected = selectedProgramId === prog.id;
-              const ProgIcon = iconMap[prog.icon] || Briefcase;
+          </label>
+          
+          <div style={{ position: "relative", width: "100%" }}>
+            <div style={{
+              position: "absolute",
+              left: "0.85rem",
+              top: "50%",
+              transform: "translateY(-50%)",
+              pointerEvents: "none",
+              display: "flex",
+              alignItems: "center"
+            }}>
+              {React.createElement(iconMap[currentProgram.icon] || Briefcase, {
+                size: 18,
+                color: currentProgram.color || "#38bdf8"
+              })}
+            </div>
 
-              return (
-                <button
-                  key={prog.id}
-                  onClick={() => onSelectProgram(prog.id)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.45rem",
-                    padding: "0.45rem 0.85rem",
-                    borderRadius: "8px",
-                    fontSize: "0.78rem",
-                    fontWeight: isSelected ? 700 : 500,
-                    background: isSelected ? `${prog.color}22` : "rgba(255, 255, 255, 0.03)",
-                    color: isSelected ? prog.color : "var(--text-secondary)",
-                    border: isSelected ? `2px solid ${prog.color}` : "1px solid var(--border-subtle)",
-                    whiteSpace: "nowrap",
-                    cursor: "pointer",
-                    transition: "all 0.15s ease"
-                  }}
+            <select
+              id="prospectus-dropdown"
+              value={selectedProgramId}
+              onChange={(e) => onSelectProgram(e.target.value)}
+              style={{
+                width: "100%",
+                appearance: "none",
+                WebkitAppearance: "none",
+                MozAppearance: "none",
+                background: "rgba(255, 255, 255, 0.05)",
+                border: `1.5px solid ${currentProgram.color || "var(--border-medium)"}`,
+                borderRadius: "10px",
+                padding: "0.75rem 2.5rem 0.75rem 2.6rem",
+                fontSize: "0.88rem",
+                fontWeight: 600,
+                color: "#f8fafc",
+                cursor: "pointer",
+                outline: "none",
+                boxShadow: `0 0 14px ${currentProgram.color}22`,
+                transition: "all 0.2s ease"
+              }}
+            >
+              {MSU_NAAWAN_PROGRAMS.map(prog => (
+                <option 
+                  key={prog.id} 
+                  value={prog.id} 
+                  style={{ background: "#0f172a", color: "#f8fafc", padding: "0.5rem" }}
                 >
-                  <ProgIcon size={14} color={isSelected ? prog.color : "#94a3b8"} />
-                  <span>{prog.major}</span>
-                </button>
-              );
-            })}
+                  {prog.major} — {prog.name} ({prog.totalUnits} Units)
+                </option>
+              ))}
+            </select>
+
+            <div style={{
+              position: "absolute",
+              right: "0.85rem",
+              top: "50%",
+              transform: "translateY(-50%)",
+              pointerEvents: "none",
+              display: "flex",
+              alignItems: "center"
+            }}>
+              <ChevronDown size={18} color="var(--text-secondary)" />
+            </div>
           </div>
         </div>
       </div>
