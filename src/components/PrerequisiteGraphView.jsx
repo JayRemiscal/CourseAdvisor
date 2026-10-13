@@ -125,9 +125,8 @@ export function PrerequisiteGraphView({
     return { ancestors, descendants };
   }, [selectedCourseId, catalog]);
 
-  // Pan handlers
+  // Pan handlers (Mouse + Touch support for mobile phones)
   const handleMouseDown = (e) => {
-    // Only drag on canvas background
     if (e.target.tagName === "svg" || e.target.classList.contains("graph-bg")) {
       setIsDragging(true);
       setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
@@ -146,67 +145,91 @@ export function PrerequisiteGraphView({
     setIsDragging(false);
   };
 
+  // Mobile Touch handlers
+  const handleTouchStart = (e) => {
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      setIsDragging(true);
+      setDragStart({ x: touch.clientX - pan.x, y: touch.clientY - pan.y });
+    }
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isDragging || e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    setPan({
+      x: touch.clientX - dragStart.x,
+      y: touch.clientY - dragStart.y
+    });
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+  };
+
   const selectedCourse = selectedCourseId ? catalog.find(c => c.id === selectedCourseId) : null;
 
   return (
-    <div className="dag-container glass-panel" style={{ position: "relative", overflow: "hidden", height: "650px", display: "flex", flexDirection: "column" }}>
+    <div className="dag-container glass-panel" style={{ position: "relative", overflow: "hidden", minHeight: "520px", height: "calc(100vh - 240px)", maxHeight: "720px", display: "flex", flexDirection: "column" }}>
       {/* Top Controls Toolbar */}
       <div style={{
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
-        padding: "0.75rem 1.25rem",
+        flexWrap: "wrap",
+        gap: "0.6rem",
+        padding: "0.65rem 1rem",
         borderBottom: "1px solid var(--border-subtle)",
-        background: "rgba(10, 14, 23, 0.75)",
+        background: "rgba(10, 14, 23, 0.85)",
         zIndex: 10
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <span style={{ fontWeight: 700, fontSize: "0.95rem" }}>Prerequisite DAG Network</span>
-            <span className="badge badge-indigo">Topological Graph Engine</span>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+            <span style={{ fontWeight: 700, fontSize: "0.875rem" }}>DAG Network</span>
+            <span className="badge badge-indigo" style={{ fontSize: "0.65rem" }}>Tiers</span>
           </div>
 
-          <div style={{ display: "flex", gap: "0.75rem", fontSize: "0.75rem", color: "var(--text-secondary)" }}>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#10b981" }} /> Completed
+          <div style={{ display: "flex", gap: "0.6rem", fontSize: "0.7rem", color: "var(--text-secondary)", flexWrap: "wrap" }}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "3px" }}>
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#10b981" }} /> Passed
             </span>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#f59e0b" }} /> Goal Target
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "3px" }}>
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#f59e0b" }} /> Goal
             </span>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#6366f1" }} /> Required
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "3px" }}>
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#6366f1" }} /> Required
             </span>
           </div>
         </div>
 
         {/* Zoom Controls */}
-        <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
           <button
             onClick={() => setZoom(z => Math.max(0.4, z - 0.15))}
             className="btn-secondary"
-            style={{ padding: "0.35rem 0.6rem" }}
+            style={{ padding: "0.25rem 0.5rem" }}
             title="Zoom Out"
           >
-            <ZoomOut size={15} />
+            <ZoomOut size={14} />
           </button>
-          <span style={{ fontSize: "0.75rem", fontFamily: "var(--font-mono)", minWidth: "42px", textAlign: "center" }}>
+          <span style={{ fontSize: "0.72rem", fontFamily: "var(--font-mono)", minWidth: "36px", textAlign: "center" }}>
             {Math.round(zoom * 100)}%
           </span>
           <button
             onClick={() => setZoom(z => Math.min(1.8, z + 0.15))}
             className="btn-secondary"
-            style={{ padding: "0.35rem 0.6rem" }}
+            style={{ padding: "0.25rem 0.5rem" }}
             title="Zoom In"
           >
-            <ZoomIn size={15} />
+            <ZoomIn size={14} />
           </button>
           <button
             onClick={() => { setZoom(1); setPan({ x: 40, y: 40 }); }}
             className="btn-secondary"
-            style={{ padding: "0.35rem 0.6rem" }}
+            style={{ padding: "0.25rem 0.5rem" }}
             title="Reset Pan & Zoom"
           >
-            <RotateCcw size={15} />
+            <RotateCcw size={14} />
           </button>
         </div>
       </div>
@@ -218,6 +241,9 @@ export function PrerequisiteGraphView({
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         style={{
           flex: 1,
           cursor: isDragging ? "grabbing" : "grab",

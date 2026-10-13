@@ -13,6 +13,7 @@ import { CatalogBrowser } from "./components/CatalogBrowser";
 import { FuzzyInspectorModal } from "./components/FuzzyInspectorModal";
 import { SystemFlowchartModal } from "./components/SystemFlowchartModal";
 import { InstallPrompt } from "./components/InstallPrompt";
+import { BottomNav } from "./components/BottomNav";
 import { 
   AlertTriangle, 
   RotateCcw, 
@@ -478,6 +479,9 @@ export default function App() {
           <span>Document ID: ARCH-2026-v2.1</span>
         </div>
       </footer>
+
+      {/* Mobile Bottom Navigation Bar (PWA Native Feel) */}
+      <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
     </div>
   );
 }

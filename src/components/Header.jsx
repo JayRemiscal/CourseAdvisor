@@ -84,14 +84,14 @@ export function Header({
         </div>
 
         {/* Global Action Buttons */}
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+        <div className="header-actions" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
           <button
             onClick={onTriggerConfetti}
             className="btn-secondary"
             style={{ fontSize: "0.75rem", padding: "0.45rem 0.75rem" }}
             title="Celebrate completed plan"
           >
-            <PartyPopper size={14} color="#f59e0b" /> Celebrate
+            <PartyPopper size={14} color="#f59e0b" /> <span className="action-text">Celebrate</span>
           </button>
 
           <button
@@ -100,7 +100,7 @@ export function Header({
             style={{ fontSize: "0.75rem", padding: "0.45rem 0.75rem" }}
             title="Export schedule as JSON"
           >
-            <Download size={14} /> Export Plan
+            <Download size={14} /> <span className="action-text">Export</span>
           </button>
 
           <button
@@ -114,8 +114,8 @@ export function Header({
         </div>
       </div>
 
-      {/* Tabs Navigation Bar */}
-      <div style={{
+      {/* Tabs Navigation Bar (Desktop View) */}
+      <div className="desktop-tabs-nav" style={{
         maxWidth: "1400px",
         margin: "0 auto",
         padding: "0 1.5rem",
