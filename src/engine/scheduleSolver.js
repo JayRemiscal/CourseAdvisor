@@ -56,12 +56,10 @@ export class ScheduleSolver {
     const isExtendedTermRequired = criticalPathLength > maxAllowedSemesters;
 
     // Calculate baseline subject confidence average
-    const avgConfidence = (
-      (confidenceScores.math || 6) +
-      (confidenceScores.coding || 6) +
-      (confidenceScores.systems || 6) +
-      (confidenceScores.theory || 6)
-    ) / 4;
+    const scores = Object.values(confidenceScores).filter(v => typeof v === "number");
+    const avgConfidence = scores.length > 0 
+      ? Math.round((scores.reduce((sum, val) => sum + val, 0) / scores.length) * 10) / 10 
+      : 6;
 
     // 2. Distribute required courses across semesters
     // Group courses by their topological tiers while respecting prerequisite order and credit caps

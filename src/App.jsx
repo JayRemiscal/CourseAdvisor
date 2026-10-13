@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import confetti from "canvas-confetti";
-import { COURSE_CATALOG, CAREER_TRACKS } from "./data/courses";
+import { 
+  MSU_NAAWAN_PROGRAMS, 
+  MSU_NAAWAN_COURSES, 
+  MSU_CAREER_TRACKS 
+} from "./data/courses";
 import { ScheduleSolver } from "./engine/scheduleSolver";
 import { MamdaniFuzzyEngine } from "./engine/fuzzyInference";
 import { Header } from "./components/Header";
@@ -26,23 +30,24 @@ import {
 } from "lucide-react";
 import "./styles/theme.css";
 
-const STORAGE_KEY = "courseadvisor_state_v1";
+const STORAGE_KEY = "msu_courseadvisor_state_v2";
 
 export default function App() {
   // Navigation
   const [activeTab, setActiveTab] = useState("planner");
 
-  // Core Student Configuration State
-  const [selectedTrackId, setSelectedTrackId] = useState("ai_ml");
-  const [targetCourseId, setTargetCourseId] = useState("CS480");
-  const [completedCourseIds, setCompletedCourseIds] = useState(["MATH101", "CS101"]);
+  // Core Degree Program & Student Configuration State
+  const [selectedProgramId, setSelectedProgramId] = useState("bsba_marketing");
+  const [selectedTrackId, setSelectedTrackId] = useState("corporate_practicum");
+  const [targetCourseId, setTargetCourseId] = useState("MKT197");
+  const [completedCourseIds, setCompletedCourseIds] = useState(["GEC101", "GEC102"]);
   const [confidenceScores, setConfidenceScores] = useState({
-    coding: 8,
-    math: 7,
-    systems: 6,
-    theory: 6
+    domain1: 7,
+    domain2: 7,
+    domain3: 6,
+    domain4: 6
   });
-  const [maxAllowedSemesters, setMaxAllowedSemesters] = useState(6);
+  const [maxAllowedSemesters, setMaxAllowedSemesters] = useState(8);
 
   // Edge-case cycle simulation state
   const [isCycleSimulated, setIsCycleSimulated] = useState(false);
@@ -52,19 +57,34 @@ export default function App() {
   const [isFlowchartModalOpen, setIsFlowchartModalOpen] = useState(false);
   const [detailedFuzzyData, setDetailedFuzzyData] = useState(null);
 
-  // Engines
-  const solver = useMemo(() => new ScheduleSolver(COURSE_CATALOG), []);
+  // Dynamic active catalog based on chosen MSU Naawan academic prospectus
+  const activeCatalog = useMemo(() => {
+    return MSU_NAAWAN_COURSES[selectedProgramId] || MSU_NAAWAN_COURSES.bsba_marketing;
+  }, [selectedProgramId]);
+
+  // Engines instantiated on current active prospectus
+  const solver = useMemo(() => new ScheduleSolver(activeCatalog), [activeCatalog]);
   const fuzzyEngine = useMemo(() => new MamdaniFuzzyEngine(), []);
 
-  // Cycle Overrides simulation map
+  // Cycle Overrides simulation map (dynamically links first two courses of active prospectus)
   const customOverrides = useMemo(() => {
     if (!isCycleSimulated) return null;
-    // Inject a loop: CS101 requires CS102, CS102 requires CS101
+    if (activeCatalog.length < 2) return null;
+    const c1 = activeCatalog[0].id;
+    const c2 = activeCatalog[1].id;
     const map = new Map();
-    map.set("CS101", ["CS102"]);
-    map.set("CS102", ["CS101"]);
+    map.set(c1, [c2]);
+    map.set(c2, [c1]);
     return map;
-  }, [isCycleSimulated]);
+  }, [isCycleSimulated, activeCatalog]);
+
+  // Helper for computing student's average confidence
+  const getAverageConfidence = useCallback(() => {
+    const scores = Object.values(confidenceScores).filter(v => typeof v === "number");
+    return scores.length > 0 
+      ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10 
+      : 6.5;
+  }, [confidenceScores]);
 
   // Load initial state from LocalStorage (Offline-First principle)
   useEffect(() => {
@@ -72,6 +92,9 @@ export default function App() {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
+        if (parsed.selectedProgramId && MSU_NAAWAN_COURSES[parsed.selectedProgramId]) {
+          setSelectedProgramId(parsed.selectedProgramId);
+        }
         if (parsed.selectedTrackId) setSelectedTrackId(parsed.selectedTrackId);
         if (parsed.targetCourseId) setTargetCourseId(parsed.targetCourseId);
         if (parsed.completedCourseIds) setCompletedCourseIds(parsed.completedCourseIds);
@@ -87,6 +110,7 @@ export default function App() {
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        selectedProgramId,
         selectedTrackId,
         targetCourseId,
         completedCourseIds,
@@ -96,18 +120,44 @@ export default function App() {
     } catch (e) {
       console.warn("Failed to persist to local storage", e);
     }
-  }, [selectedTrackId, targetCourseId, completedCourseIds, confidenceScores, maxAllowedSemesters]);
+  }, [selectedProgramId, selectedTrackId, targetCourseId, completedCourseIds, confidenceScores, maxAllowedSemesters]);
 
   // Execute Graph Traversal & Fuzzy Workload Engine
   const scheduleResult = useMemo(() => {
+    // Validate targetCourseId belongs to active catalog; fallback to program default if mismatch
+    const validTargetId = activeCatalog.some(c => c.id === targetCourseId)
+      ? targetCourseId
+      : activeCatalog[activeCatalog.length - 1]?.id;
+
     return solver.generateSchedule({
-      targetCourseIds: [targetCourseId],
+      targetCourseIds: [validTargetId],
       completedCourseIds,
       confidenceScores,
       maxAllowedSemesters,
       customOverrides
     });
-  }, [solver, targetCourseId, completedCourseIds, confidenceScores, maxAllowedSemesters, customOverrides]);
+  }, [solver, targetCourseId, activeCatalog, completedCourseIds, confidenceScores, maxAllowedSemesters, customOverrides]);
+
+  // Handle Degree Program Switching
+  const handleSelectProgram = (programId) => {
+    setSelectedProgramId(programId);
+    const prog = MSU_NAAWAN_PROGRAMS.find(p => p.id === programId) || MSU_NAAWAN_PROGRAMS[0];
+    const tracks = MSU_CAREER_TRACKS[programId] || [];
+    const defaultTrack = tracks[0];
+
+    if (defaultTrack) {
+      setSelectedTrackId(defaultTrack.id);
+      setTargetCourseId(defaultTrack.targetGoalCourseId);
+    } else {
+      setSelectedTrackId(null);
+      setTargetCourseId(prog.defaultTarget);
+    }
+
+    // Reset completed courses and manual edits for the clean new prospectus
+    setCompletedCourseIds([]);
+    setCustomSemesterPlan(null);
+    setIsCycleSimulated(false);
+  };
 
   // Handle Track Selection
   const handleSelectTrack = (track) => {
@@ -138,7 +188,7 @@ export default function App() {
   // Reset custom manual shifts whenever inputs recalculate
   useEffect(() => {
     setCustomSemesterPlan(null);
-  }, [targetCourseId, completedCourseIds, confidenceScores, maxAllowedSemesters, customOverrides]);
+  }, [targetCourseId, completedCourseIds, confidenceScores, maxAllowedSemesters, customOverrides, selectedProgramId]);
 
   const activeSemesters = customSemesterPlan || scheduleResult.semesters || [];
 
@@ -159,9 +209,7 @@ export default function App() {
     targetSem.totalCredits += course.credits;
 
     // Recalculate fuzzy stress for affected terms
-    const avgConfidence = (
-      confidenceScores.math + confidenceScores.coding + confidenceScores.systems + confidenceScores.theory
-    ) / 4;
+    const avgConfidence = getAverageConfidence();
 
     [sourceSem, targetSem].forEach(sem => {
       if (sem.courses.length > 0) {
@@ -176,9 +224,7 @@ export default function App() {
 
   // Inspect Fuzzy Engine Modal
   const handleOpenFuzzyInspector = (customFuzzy = null) => {
-    const avgConfidence = (
-      confidenceScores.math + confidenceScores.coding + confidenceScores.systems + confidenceScores.theory
-    ) / 4;
+    const avgConfidence = getAverageConfidence();
     const evaluation = customFuzzy || fuzzyEngine.evaluate(avgConfidence, 7.5);
     setDetailedFuzzyData(evaluation);
     setIsFuzzyModalOpen(true);
@@ -195,14 +241,17 @@ export default function App() {
 
   // Reset to default
   const handleResetPlan = () => {
-    setSelectedTrackId("ai_ml");
-    setTargetCourseId("CS480");
-    setCompletedCourseIds(["MATH101", "CS101"]);
-    setConfidenceScores({ coding: 8, math: 7, systems: 6, theory: 6 });
-    setMaxAllowedSemesters(6);
+    setSelectedProgramId("bsba_marketing");
+    setSelectedTrackId("corporate_practicum");
+    setTargetCourseId("MKT197");
+    setCompletedCourseIds(["GEC101", "GEC102"]);
+    setConfidenceScores({ domain1: 7, domain2: 7, domain3: 6, domain4: 6 });
+    setMaxAllowedSemesters(8);
     setIsCycleSimulated(false);
     setCustomSemesterPlan(null);
-    localStorage.removeItem(STORAGE_KEY);
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch (e) {}
   };
 
   // Export JSON Plan
@@ -210,6 +259,7 @@ export default function App() {
     const exportPayload = {
       version: "ARCH-2026-v2.1",
       exportedAt: new Date().toISOString(),
+      degreeProgram: selectedProgramId,
       targetGoal: targetCourseId,
       completedCourses: completedCourseIds,
       confidenceScores,
@@ -226,7 +276,7 @@ export default function App() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `CourseAdvisor_Roadmap_${targetCourseId}.json`;
+    a.download = `MSU_CourseAdvisor_${selectedProgramId}_${targetCourseId}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -300,12 +350,14 @@ export default function App() {
         {/* Tab 1: Semester Roadmap Planner */}
         {activeTab === "planner" && scheduleResult.success && (
           <div className="fade-in">
-            {/* Step 1: Target Goal Selector */}
+            {/* Step 1: Target Goal Selector & MSU Naawan Prospectus Switcher */}
             <GoalSelector
+              selectedProgramId={selectedProgramId}
               selectedTrackId={selectedTrackId}
               selectedTargetCourseId={targetCourseId}
-              catalog={COURSE_CATALOG}
+              catalog={activeCatalog}
               maxAllowedSemesters={maxAllowedSemesters}
+              onSelectProgram={handleSelectProgram}
               onSelectTrack={handleSelectTrack}
               onSelectTargetCourse={handleSelectTargetCourse}
               onUpdateAllowedSemesters={setMaxAllowedSemesters}
@@ -327,18 +379,18 @@ export default function App() {
           </div>
         )}
 
-        {/* Tab 2: Prerequisite DAG Visualizer */}
+        {/* Tab 2: Prerequisite DAG Visualizer & Mobile Pathway Stream */}
         {activeTab === "graph" && (
           <div className="fade-in">
             <div style={{ marginBottom: "1rem" }}>
               <h2 style={{ fontSize: "1.25rem", fontWeight: 800 }}>Directed Acyclic Graph (DAG) Network</h2>
               <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
-                Click any course node to highlight upstream prerequisites (blue) and downstream dependents (purple).
+                Touch any course node to highlight upstream prerequisites (blue) and downstream dependents (purple).
               </p>
             </div>
 
             <PrerequisiteGraphView
-              catalog={COURSE_CATALOG}
+              catalog={activeCatalog}
               requiredCourses={scheduleResult.requiredCourses || []}
               completedCourseIds={completedCourseIds}
               targetCourseIds={[targetCourseId]}
@@ -352,13 +404,14 @@ export default function App() {
         {activeTab === "confidence" && (
           <div className="fade-in" style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
             <ConfidenceSliders
+              programId={selectedProgramId}
               confidenceScores={confidenceScores}
               onChange={setConfidenceScores}
             />
 
             {/* Quick Preview of Resulting Schedule Under Current Confidence */}
             <div className="glass-panel" style={{ padding: "1.25rem" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "0.5rem" }}>
                 <div>
                   <h3 style={{ fontSize: "1rem", fontWeight: 700 }}>Real-time Recalculation Impact</h3>
                   <p style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
@@ -417,7 +470,7 @@ export default function App() {
         {/* Tab 4: Transcript History */}
         {activeTab === "transcript" && (
           <TranscriptManager
-            catalog={COURSE_CATALOG}
+            catalog={activeCatalog}
             completedCourseIds={completedCourseIds}
             onToggleCourse={handleToggleCompletedCourse}
             onSetCompletedCourses={setCompletedCourseIds}
@@ -441,7 +494,7 @@ export default function App() {
         {/* Tab 6: Course Catalog */}
         {activeTab === "catalog" && (
           <CatalogBrowser
-            catalog={COURSE_CATALOG}
+            catalog={activeCatalog}
             completedCourseIds={completedCourseIds}
             targetCourseIds={[targetCourseId]}
             onToggleComplete={handleToggleCompletedCourse}
@@ -472,11 +525,11 @@ export default function App() {
         marginTop: "auto"
       }}>
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
-          <span>CourseAdvisor Native Architecture Platform</span>
+          <span>Mindanao State University at Naawan (MSU Naawan)</span>
           <span>•</span>
-          <span>Dual-Engine: Backward Chaining Inference & Mamdani Fuzzy System</span>
+          <span>CourseAdvisor Dual-Engine Platform (ARCH-2026-v2.1)</span>
           <span>•</span>
-          <span>Document ID: ARCH-2026-v2.1</span>
+          <span>Offline-Ready Progressive Web App</span>
         </div>
       </footer>
 
