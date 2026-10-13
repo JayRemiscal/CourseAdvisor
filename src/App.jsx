@@ -12,6 +12,7 @@ import { TranscriptManager } from "./components/TranscriptManager";
 import { CatalogBrowser } from "./components/CatalogBrowser";
 import { FuzzyInspectorModal } from "./components/FuzzyInspectorModal";
 import { SystemFlowchartModal } from "./components/SystemFlowchartModal";
+import { InstallPrompt } from "./components/InstallPrompt";
 import { 
   AlertTriangle, 
   RotateCcw, 
@@ -455,6 +456,9 @@ export default function App() {
           onClose={() => setIsFuzzyModalOpen(false)}
         />
       )}
+
+      {/* PWA App Install Banner for PWABuilder / Mobile App Install */}
+      <InstallPrompt />
 
       {/* Footer */}
       <footer style={{

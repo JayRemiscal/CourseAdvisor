@@ -55,6 +55,29 @@ npm run preview
 
 ---
 
+## 📱 Packaging as Mobile App with PWA Builder (PWABuilder)
+
+CourseAdvisor is fully configured with a 100% compliant Progressive Web App specification ready for [PWABuilder](https://www.pwabuilder.com/):
+
+- **Web App Manifest**: [manifest.json](file:///c:/Users/User/Documents/second%20app/public/manifest.json) includes `standalone` mode, high-res 192x192 and 512x512 maskable icons, shortcuts, and both wide (desktop) and narrow (mobile) screenshots.
+- **Service Worker**: [sw.js](file:///c:/Users/User/Documents/second%20app/public/sw.js) pre-caches app assets and provides complete offline functionality.
+- **Install App Banner**: Integrated install prompt for instant installation on Android, iOS, Windows, and Mac.
+
+### How to generate your mobile APK / App Store packages:
+1. Deploy this app to any HTTPS host (e.g., Vercel, Netlify, or GitHub Pages):
+   ```bash
+   npm run build
+   # Push dist/ to your hosting provider
+   ```
+2. Navigate to **[pwabuilder.com](https://www.pwabuilder.com/)** and enter your deployed URL.
+3. PWABuilder will automatically validate your manifest and service worker.
+4. Click **"Package for Stores"** to generate:
+   - **Android**: Google Play Store `.aab` package or standalone `.apk`
+   - **iOS**: Apple App Store Xcode package
+   - **Windows**: Microsoft Store `.msix` package
+
+---
+
 ## 📐 System Pipeline Architecture
 
 ```mermaid

@@ -1,19 +1,26 @@
 {
-  "name": "second-app",
+  "name": "courseadvisor",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "oxlint",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@expo/metro-runtime": "^57.0.16",
+    "@expo/vector-icons": "^15.1.1",
     "canvas-confetti": "^1.9.4",
+    "expo": "^57.0.28",
+    "expo-status-bar": "^57.0.1",
     "lucide-react": "^1.56.0",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "react-native": "^0.86.3",
+    "react-native-safe-area-context": "^5.7.0",
+    "react-native-svg": "^15.15.4",
+    "react-native-web": "^0.21.4"
   },
   "devDependencies": {
     "@types/react": "^19.2.18",

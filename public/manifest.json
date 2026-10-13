@@ -1,0 +1,67 @@
+{
+  "name": "CourseAdvisor - Academic Planning Engine",
+  "short_name": "CourseAdvisor",
+  "description": "Intelligent academic planning engine calculating optimal semester class schedules using Backward Chaining and Mamdani Fuzzy Logic.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "window-controls-overlay", "minimal-ui"],
+  "background_color": "#0a0e17",
+  "theme_color": "#0a0e17",
+  "orientation": "portrait-primary",
+  "id": "/courseadvisor",
+  "categories": ["education", "productivity"],
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot-wide.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "CourseAdvisor Desktop Planner & Prerequisite DAG"
+    },
+    {
+      "src": "/screenshot-narrow.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "CourseAdvisor Mobile Semester Stress Meter"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Semester Roadmap",
+      "short_name": "Roadmap",
+      "description": "View optimal semester-by-semester course plan",
+      "url": "/#planner",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Prerequisite DAG",
+      "short_name": "DAG Network",
+      "description": "Inspect topological prerequisite dependency tree",
+      "url": "/#graph",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
