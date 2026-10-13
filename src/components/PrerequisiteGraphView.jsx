@@ -250,7 +250,8 @@ export function PrerequisiteGraphView({
           background: "radial-gradient(#1e293b 1px, transparent 1px)",
           backgroundSize: "24px 24px",
           position: "relative",
-          userSelect: "none"
+          userSelect: "none",
+          touchAction: "none"
         }}
       >
         <svg
