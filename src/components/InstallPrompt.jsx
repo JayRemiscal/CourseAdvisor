@@ -14,6 +14,11 @@ export function InstallPrompt() {
       return;
     }
 
+    // Check if dismissed previously
+    if (sessionStorage.getItem("msu_pwa_dismissed")) {
+      return;
+    }
+
     // Detect iOS
     const userAgent = window.navigator.userAgent.toLowerCase();
     const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
@@ -22,19 +27,28 @@ export function InstallPrompt() {
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
-      setShowPrompt(true);
+      if (!sessionStorage.getItem("msu_pwa_dismissed")) {
+        setShowPrompt(true);
+      }
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
 
-    // If iOS and not installed, show after 3 seconds
-    if (isIosDevice && !window.navigator.standalone) {
-      const timer = setTimeout(() => setShowPrompt(true), 3000);
+    // If iOS and not installed, show after 5 seconds if not dismissed
+    if (isIosDevice && !window.navigator.standalone && !sessionStorage.getItem("msu_pwa_dismissed")) {
+      const timer = setTimeout(() => setShowPrompt(true), 5000);
       return () => clearTimeout(timer);
     }
 
     return () => window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
   }, []);
+
+  const handleDismiss = () => {
+    setShowPrompt(false);
+    try {
+      sessionStorage.setItem("msu_pwa_dismissed", "true");
+    } catch (e) {}
+  };
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
@@ -52,12 +66,12 @@ export function InstallPrompt() {
     <div
       style={{
         position: "fixed",
-        bottom: "16px",
+        bottom: "calc(4.75rem + env(safe-area-inset-bottom, 16px))",
         left: "50%",
         transform: "translateX(-50%)",
-        zIndex: 9999,
-        width: "calc(100% - 32px)",
-        maxWidth: "460px",
+        zIndex: 99,
+        width: "calc(100% - 24px)",
+        maxWidth: "420px",
         background: "rgba(17, 24, 39, 0.95)",
         backdropFilter: "blur(16px)",
         WebkitBackdropFilter: "blur(16px)",
@@ -108,7 +122,7 @@ export function InstallPrompt() {
         )}
 
         <button
-          onClick={() => setShowPrompt(false)}
+          onClick={handleDismiss}
           style={{
             padding: "0.35rem",
             color: "#64748b",

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { SemesterStressMeter } from "./SemesterStressMeter";
 import { ReasoningCard } from "./ReasoningCard";
-import { CATEGORY_COLORS } from "../data/courses";
+import { CATEGORY_COLORS, getCategoryTheme } from "../data/courses";
 import { 
   Calendar, 
   ChevronRight, 
@@ -210,7 +210,7 @@ export function SemesterPlanBoard({
                   </div>
                 ) : (
                   term.courses.map((course) => {
-                    const cat = CATEGORY_COLORS[course.category] || CATEGORY_COLORS.coding;
+                    const cat = getCategoryTheme(course.category);
 
                     return (
                       <div

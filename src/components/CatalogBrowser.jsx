@@ -1,9 +1,9 @@
-import React, { useState } from "react";
-import { Search, BookOpen, CheckCircle, Target, Layers } from "lucide-react";
+import React, { useState, useMemo } from "react";
+import { Search, CheckCircle, Target, Layers, X, BookOpen } from "lucide-react";
 import { CATEGORY_COLORS } from "../data/courses";
 
 export function CatalogBrowser({
-  catalog,
+  catalog = [],
   completedCourseIds = [],
   targetCourseIds = [],
   onToggleComplete,
@@ -12,34 +12,69 @@ export function CatalogBrowser({
   const [search, setSearch] = useState("");
   const [selectedCat, setSelectedCat] = useState("all");
 
-  const completedSet = new Set(completedCourseIds);
-  const targetSet = new Set(targetCourseIds);
+  const completedSet = useMemo(() => new Set(completedCourseIds), [completedCourseIds]);
+  const targetSet = useMemo(() => new Set(targetCourseIds), [targetCourseIds]);
 
-  const filtered = catalog.filter(c => {
-    const matchesSearch = 
-      c.code.toLowerCase().includes(search.toLowerCase()) ||
-      c.title.toLowerCase().includes(search.toLowerCase()) ||
-      c.description.toLowerCase().includes(search.toLowerCase()) ||
-      (c.skills && c.skills.some(s => s.toLowerCase().includes(search.toLowerCase())));
+  // Dynamically extract categories from the actual active catalog
+  const availableCategories = useMemo(() => {
+    const cats = new Set();
+    catalog.forEach(c => {
+      if (c.category) cats.add(c.category);
+    });
+    return ["all", ...Array.from(cats)];
+  }, [catalog]);
 
-    const matchesCat = selectedCat === "all" || c.category === selectedCat;
-    return matchesSearch && matchesCat;
-  });
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return catalog.filter(c => {
+      const code = String(c.code || c.id || "").toLowerCase();
+      const title = String(c.title || "").toLowerCase();
+      const desc = String(c.description || "").toLowerCase();
+      const skills = Array.isArray(c.skills) ? c.skills.join(" ").toLowerCase() : "";
+
+      const matchesSearch = !q || code.includes(q) || title.includes(q) || desc.includes(q) || skills.includes(q);
+      const matchesCat = selectedCat === "all" || c.category === selectedCat;
+
+      return matchesSearch && matchesCat;
+    });
+  }, [catalog, search, selectedCat]);
+
+  const getCategoryTheme = (catKey) => {
+    if (CATEGORY_COLORS && CATEGORY_COLORS[catKey]) {
+      return CATEGORY_COLORS[catKey];
+    }
+    return {
+      bg: "rgba(99, 102, 241, 0.12)",
+      border: "#6366f1",
+      text: "#a5b4fc",
+      label: catKey ? (catKey.charAt(0).toUpperCase() + catKey.slice(1)) : "Major"
+    };
+  };
 
   return (
-    <div className="catalog-browser glass-panel fade-in" style={{ padding: "1.5rem" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem", flexWrap: "wrap", gap: "1rem" }}>
+    <div className="catalog-browser glass-panel fade-in" style={{ padding: "1.25rem", borderRadius: "14px" }}>
+      {/* Header & Search */}
+      <div style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        flexWrap: "wrap",
+        gap: "0.85rem",
+        marginBottom: "1rem"
+      }}>
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
-            <span className="badge badge-indigo">Academic Catalog</span>
-            <h3 style={{ fontSize: "1.15rem", fontWeight: 700 }}>Curriculum & Degree Repository</h3>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <span className="badge badge-indigo">Degree Catalog</span>
+            <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+              {filtered.length} of {catalog.length} Courses
+            </span>
           </div>
-          <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
-            Search full catalog courses, inspect prerequisite requirements, and set targets
-          </p>
+          <h2 style={{ fontSize: "1.15rem", fontWeight: 800, marginTop: "2px", color: "#f8fafc" }}>
+            Curriculum Course Directory
+          </h2>
         </div>
 
-        {/* Search input */}
+        {/* Search Bar */}
         <div style={{
           display: "flex",
           alignItems: "center",
@@ -47,13 +82,14 @@ export function CatalogBrowser({
           background: "rgba(255, 255, 255, 0.05)",
           border: "1px solid var(--border-medium)",
           borderRadius: "8px",
-          padding: "0.4rem 0.75rem",
-          minWidth: "260px"
+          padding: "0.35rem 0.65rem",
+          width: "100%",
+          maxWidth: "320px"
         }}>
           <Search size={15} color="var(--text-muted)" />
           <input
             type="text"
-            placeholder="Search code, title, skills..."
+            placeholder="Search code, title, keywords..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             style={{
@@ -61,157 +97,207 @@ export function CatalogBrowser({
               border: "none",
               outline: "none",
               color: "var(--text-primary)",
-              fontSize: "0.85rem",
+              fontSize: "0.82rem",
               width: "100%"
             }}
           />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-muted)" }}
+              aria-label="Clear search"
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Category filters */}
-      <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.25rem", flexWrap: "wrap" }}>
-        {["all", "coding", "math", "systems", "theory", "capstone"].map(cat => (
+      {/* Category Filter Pills */}
+      {availableCategories.length > 2 && (
+        <div style={{
+          display: "flex",
+          gap: "0.4rem",
+          marginBottom: "1rem",
+          overflowX: "auto",
+          paddingBottom: "4px"
+        }}>
+          {availableCategories.map(cat => {
+            const isSelected = selectedCat === cat;
+            const theme = cat === "all" ? null : getCategoryTheme(cat);
+
+            return (
+              <button
+                key={cat}
+                onClick={() => setSelectedCat(cat)}
+                style={{
+                  fontSize: "0.72rem",
+                  padding: "0.25rem 0.65rem",
+                  borderRadius: "6px",
+                  background: isSelected ? "rgba(99, 102, 241, 0.25)" : "rgba(255, 255, 255, 0.03)",
+                  color: isSelected ? "#a5b4fc" : "var(--text-secondary)",
+                  border: isSelected ? "1px solid #6366f1" : "1px solid var(--border-subtle)",
+                  whiteSpace: "nowrap",
+                  fontWeight: isSelected ? 700 : 500,
+                  cursor: "pointer",
+                  transition: "all 0.15s ease"
+                }}
+              >
+                {cat === "all" ? "All Courses" : (theme?.label || cat)}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Empty Search Result */}
+      {filtered.length === 0 && (
+        <div style={{
+          textAlign: "center",
+          padding: "2.5rem 1rem",
+          background: "rgba(255, 255, 255, 0.02)",
+          borderRadius: "10px",
+          border: "1px dashed var(--border-subtle)"
+        }}>
+          <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
+            No courses found matching <strong>"{search}"</strong>.
+          </p>
           <button
-            key={cat}
-            onClick={() => setSelectedCat(cat)}
-            style={{
-              fontSize: "0.75rem",
-              padding: "0.35rem 0.75rem",
-              borderRadius: "6px",
-              background: selectedCat === cat ? "rgba(99, 102, 241, 0.25)" : "rgba(255, 255, 255, 0.04)",
-              color: selectedCat === cat ? "#a5b4fc" : "var(--text-secondary)",
-              border: selectedCat === cat ? "1px solid #6366f1" : "1px solid var(--border-subtle)",
-              textTransform: "capitalize",
-              fontWeight: selectedCat === cat ? 700 : 500
-            }}
+            onClick={() => { setSearch(""); setSelectedCat("all"); }}
+            className="btn-ghost"
+            style={{ fontSize: "0.75rem", marginTop: "0.75rem" }}
           >
-            {cat}
+            Clear Filters
           </button>
-        ))}
-      </div>
+        </div>
+      )}
 
       {/* Course Cards Grid */}
       <div style={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-        gap: "1rem"
+        gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+        gap: "0.85rem"
       }}>
         {filtered.map(course => {
           const isDone = completedSet.has(course.id);
           const isTarget = targetSet.has(course.id);
-          const cat = CATEGORY_COLORS[course.category] || CATEGORY_COLORS.coding;
+          const theme = getCategoryTheme(course.category);
+          const prereqs = Array.isArray(course.prerequisites) ? course.prerequisites : [];
 
           return (
             <div
               key={course.id}
               style={{
                 background: "rgba(255, 255, 255, 0.025)",
-                border: isTarget ? "2px solid #f59e0b" : isDone ? "1px solid rgba(16, 185, 129, 0.4)" : "1px solid var(--border-subtle)",
+                border: isTarget 
+                  ? "2px solid #f59e0b" 
+                  : isDone 
+                  ? "1px solid rgba(16, 185, 129, 0.45)" 
+                  : "1px solid var(--border-subtle)",
                 borderRadius: "10px",
-                padding: "1rem",
+                padding: "0.85rem",
                 display: "flex",
                 flexDirection: "column",
-                position: "relative"
+                position: "relative",
+                transition: "border 0.2s ease"
               }}
             >
-              {/* Category pill and tags */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+              {/* Category pill & units */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
                 <span
                   style={{
-                    fontSize: "0.7rem",
+                    fontSize: "0.68rem",
                     fontWeight: 700,
-                    color: cat.text,
-                    background: cat.bg,
-                    padding: "0.2rem 0.5rem",
+                    color: theme.text,
+                    background: theme.bg,
+                    padding: "0.15rem 0.45rem",
                     borderRadius: "4px",
-                    border: `1px solid ${cat.border}44`
+                    border: `1px solid ${theme.border}44`
                   }}
                 >
-                  {cat.label}
+                  {theme.label}
                 </span>
 
                 <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
-                  {course.credits} cr • Diff: {course.difficulty}/10
+                  {course.credits || 3} Units • Yr {course.year || 1} Sem {course.sem || 1}
                 </span>
               </div>
 
-              {/* Course Title and Code */}
-              <div style={{ marginBottom: "0.5rem" }}>
-                <div style={{ fontFamily: "var(--font-mono)", fontWeight: 800, fontSize: "1rem", color: "var(--text-primary)" }}>
-                  {course.code}
+              {/* Code & Title */}
+              <div style={{ marginBottom: "0.4rem" }}>
+                <div style={{ fontFamily: "var(--font-mono)", fontWeight: 800, fontSize: "0.95rem", color: "#f8fafc" }}>
+                  {course.code || course.id}
                 </div>
-                <div style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--text-secondary)", marginTop: "2px" }}>
+                <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "var(--text-secondary)", lineHeight: 1.3 }}>
                   {course.title}
                 </div>
               </div>
 
-              {/* Description */}
-              <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginBottom: "0.75rem", lineHeight: 1.4, flex: 1 }}>
-                {course.description}
-              </p>
+              {/* Description (clean & optional) */}
+              {course.description && (
+                <p style={{
+                  fontSize: "0.72rem",
+                  color: "var(--text-muted)",
+                  marginBottom: "0.6rem",
+                  lineHeight: 1.35,
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical",
+                  overflow: "hidden",
+                  flex: 1
+                }}>
+                  {course.description}
+                </p>
+              )}
 
               {/* Prerequisites line */}
-              <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginBottom: "0.75rem" }}>
-                <span style={{ color: "var(--text-muted)" }}>Prerequisites: </span>
-                {course.prerequisites.length > 0 ? (
+              <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", marginBottom: "0.65rem", marginTop: "auto" }}>
+                <span style={{ color: "var(--text-muted)" }}>Prereqs: </span>
+                {prereqs.length > 0 ? (
                   <span style={{ fontFamily: "var(--font-mono)", color: "#818cf8" }}>
-                    {course.prerequisites.join(", ")}
+                    {prereqs.join(", ")}
                   </span>
                 ) : (
-                  <span style={{ color: "#10b981" }}>None (Entry Level)</span>
+                  <span style={{ color: "#10b981", fontWeight: 600 }}>None (Entry Level)</span>
                 )}
               </div>
 
-              {/* Skills Tags */}
-              {course.skills && (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem", marginBottom: "0.75rem" }}>
-                  {course.skills.map(sk => (
-                    <span
-                      key={sk}
-                      style={{
-                        fontSize: "0.68rem",
-                        background: "rgba(255, 255, 255, 0.04)",
-                        color: "var(--text-secondary)",
-                        padding: "0.15rem 0.4rem",
-                        borderRadius: "4px"
-                      }}
-                    >
-                      {sk}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              <div style={{ display: "flex", gap: "0.5rem", borderTop: "1px solid var(--border-subtle)", paddingTop: "0.65rem" }}>
+              {/* Minimal Action Buttons */}
+              <div style={{ display: "flex", gap: "0.4rem", borderTop: "1px solid var(--border-subtle)", paddingTop: "0.55rem" }}>
                 <button
+                  type="button"
                   onClick={() => onToggleComplete(course.id)}
                   style={{
                     flex: 1,
                     fontSize: "0.72rem",
-                    padding: "0.35rem 0.5rem",
+                    padding: "0.3rem 0.45rem",
                     borderRadius: "6px",
-                    background: isDone ? "rgba(16, 185, 129, 0.2)" : "rgba(255, 255, 255, 0.05)",
+                    background: isDone ? "rgba(16, 185, 129, 0.2)" : "rgba(255, 255, 255, 0.04)",
                     color: isDone ? "#6ee7b7" : "var(--text-secondary)",
-                    border: isDone ? "1px solid #10b981" : "1px solid var(--border-subtle)"
+                    border: isDone ? "1px solid #10b981" : "1px solid var(--border-subtle)",
+                    cursor: "pointer",
+                    fontWeight: 600
                   }}
                 >
                   {isDone ? "✓ Passed" : "Mark Passed"}
                 </button>
 
                 <button
+                  type="button"
                   onClick={() => onSetAsTarget(course.id)}
                   style={{
                     flex: 1,
                     fontSize: "0.72rem",
-                    padding: "0.35rem 0.5rem",
+                    padding: "0.3rem 0.45rem",
                     borderRadius: "6px",
-                    background: isTarget ? "rgba(245, 158, 11, 0.2)" : "rgba(255, 255, 255, 0.05)",
+                    background: isTarget ? "rgba(245, 158, 11, 0.2)" : "rgba(255, 255, 255, 0.04)",
                     color: isTarget ? "#fbbf24" : "var(--text-secondary)",
-                    border: isTarget ? "1px solid #f59e0b" : "1px solid var(--border-subtle)"
+                    border: isTarget ? "1px solid #f59e0b" : "1px solid var(--border-subtle)",
+                    cursor: "pointer",
+                    fontWeight: 600
                   }}
                 >
-                  {isTarget ? "★ Current Goal" : "Target as Goal"}
+                  {isTarget ? "★ Target Goal" : "Set as Goal"}
                 </button>
               </div>
             </div>

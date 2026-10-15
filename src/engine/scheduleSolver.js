@@ -6,8 +6,8 @@
  * Generates transparent reasoning cards explaining each placement.
  */
 
-import { BackwardChainingEngine } from "./backwardChaining";
-import { MamdaniFuzzyEngine } from "./fuzzyInference";
+import { BackwardChainingEngine } from "./backwardChaining.js";
+import { MamdaniFuzzyEngine } from "./fuzzyInference.js";
 
 export class ScheduleSolver {
   constructor(courseCatalog) {

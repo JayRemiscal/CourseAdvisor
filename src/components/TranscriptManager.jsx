@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { CheckCircle2, BookOpen, Filter, CheckSquare, Square, Sparkles } from "lucide-react";
-import { CATEGORY_COLORS } from "../data/courses";
+import { CATEGORY_COLORS, getCategoryTheme } from "../data/courses";
 
 export function TranscriptManager({
   catalog,
@@ -132,7 +132,7 @@ export function TranscriptManager({
       }}>
         {filteredCatalog.map(course => {
           const isDone = completedSet.has(course.id);
-          const cat = CATEGORY_COLORS[course.category] || CATEGORY_COLORS.coding;
+          const cat = getCategoryTheme(course.category);
 
           return (
             <div

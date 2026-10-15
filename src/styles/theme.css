@@ -310,11 +310,24 @@ button {
 
   .header-actions {
     gap: 0.35rem !important;
+    flex-shrink: 0 !important;
   }
 
   .header-actions button {
-    padding: 0.35rem 0.5rem !important;
+    padding: 0.38rem 0.5rem !important;
     font-size: 0.72rem !important;
+  }
+
+  .action-text {
+    display: none !important;
+  }
+
+  .badge-hide-mobile {
+    display: none !important;
+  }
+
+  .header-meta-text {
+    display: none !important;
   }
 }
 

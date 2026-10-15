@@ -15,7 +15,7 @@ import { PrerequisiteGraphView } from "./components/PrerequisiteGraphView";
 import { TranscriptManager } from "./components/TranscriptManager";
 import { CatalogBrowser } from "./components/CatalogBrowser";
 import { FuzzyInspectorModal } from "./components/FuzzyInspectorModal";
-import { SystemFlowchartModal } from "./components/SystemFlowchartModal";
+import { ImportProspectusModal } from "./components/ImportProspectusModal";
 import { InstallPrompt } from "./components/InstallPrompt";
 import { BottomNav } from "./components/BottomNav";
 import { 
@@ -31,10 +31,14 @@ import {
 import "./styles/theme.css";
 
 const STORAGE_KEY = "msu_courseadvisor_state_v2";
+const IMPORTED_PROSPECTUS_KEY = "msu_imported_prospectus_v1";
 
 export default function App() {
   // Navigation
   const [activeTab, setActiveTab] = useState("planner");
+
+  // Student Custom Imported Prospectus state
+  const [importedProspectus, setImportedProspectus] = useState(null);
 
   // Core Degree Program & Student Configuration State
   const [selectedProgramId, setSelectedProgramId] = useState("bsba_marketing");
@@ -54,13 +58,55 @@ export default function App() {
 
   // Modals
   const [isFuzzyModalOpen, setIsFuzzyModalOpen] = useState(false);
-  const [isFlowchartModalOpen, setIsFlowchartModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [detailedFuzzyData, setDetailedFuzzyData] = useState(null);
 
-  // Dynamic active catalog based on chosen MSU Naawan academic prospectus
+  // Dynamic active program metadata (handles student imported vs preloaded)
+  const activeProgramInfo = useMemo(() => {
+    if (selectedProgramId === "imported" && importedProspectus) {
+      return {
+        id: "imported",
+        name: importedProspectus.name || "Student Imported Curriculum",
+        major: importedProspectus.major || "Custom Specialization",
+        college: importedProspectus.college || "Academic Department",
+        reference: importedProspectus.reference || `Imported by Student (${importedProspectus.courses.length} courses)`,
+        totalUnits: importedProspectus.totalUnits,
+        color: "#8b5cf6",
+        icon: "GraduationCap",
+        isImported: true
+      };
+    }
+    return MSU_NAAWAN_PROGRAMS.find(p => p.id === selectedProgramId) || MSU_NAAWAN_PROGRAMS[0];
+  }, [selectedProgramId, importedProspectus]);
+
+  // Dynamic active catalog based on student's imported prospectus or MSU Naawan program
   const activeCatalog = useMemo(() => {
+    if (selectedProgramId === "imported" && importedProspectus?.courses) {
+      return importedProspectus.courses;
+    }
     return MSU_NAAWAN_COURSES[selectedProgramId] || MSU_NAAWAN_COURSES.bsba_marketing;
-  }, [selectedProgramId]);
+  }, [selectedProgramId, importedProspectus]);
+
+  // Career Tracks / Target Milestones for active prospectus
+  const careerTracks = useMemo(() => {
+    if (selectedProgramId === "imported" && importedProspectus) {
+      if (importedProspectus.terminalCapstones && importedProspectus.terminalCapstones.length > 0) {
+        return importedProspectus.terminalCapstones.slice(0, 4).map((capId, idx) => {
+          const course = importedProspectus.courses.find(c => c.id === capId) || { code: capId, title: "Capstone Milestone" };
+          return {
+            id: `capstone_${capId}`,
+            title: course.title,
+            targetGoalCourseId: capId,
+            description: `Target capstone goal: complete ${course.code} (${course.credits || 3} units)`,
+            color: ["#8b5cf6", "#3b82f6", "#10b981", "#f59e0b"][idx % 4],
+            icon: "Award"
+          };
+        });
+      }
+      return [];
+    }
+    return MSU_CAREER_TRACKS[selectedProgramId] || MSU_CAREER_TRACKS.bsba_marketing;
+  }, [selectedProgramId, importedProspectus]);
 
   // Engines instantiated on current active prospectus
   const solver = useMemo(() => new ScheduleSolver(activeCatalog), [activeCatalog]);
@@ -89,17 +135,32 @@ export default function App() {
   // Load initial state from LocalStorage (Offline-First principle)
   useEffect(() => {
     try {
+      const savedImport = localStorage.getItem(IMPORTED_PROSPECTUS_KEY);
+      let parsedImport = null;
+      if (savedImport) {
+        parsedImport = JSON.parse(savedImport);
+        setImportedProspectus(parsedImport);
+      }
+
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed.selectedProgramId && MSU_NAAWAN_COURSES[parsed.selectedProgramId]) {
-          setSelectedProgramId(parsed.selectedProgramId);
+        if (parsed.selectedProgramId) {
+          if (parsed.selectedProgramId === "imported" && parsedImport) {
+            setSelectedProgramId("imported");
+          } else if (MSU_NAAWAN_COURSES[parsed.selectedProgramId]) {
+            setSelectedProgramId(parsed.selectedProgramId);
+          }
         }
         if (parsed.selectedTrackId) setSelectedTrackId(parsed.selectedTrackId);
         if (parsed.targetCourseId) setTargetCourseId(parsed.targetCourseId);
         if (parsed.completedCourseIds) setCompletedCourseIds(parsed.completedCourseIds);
         if (parsed.confidenceScores) setConfidenceScores(parsed.confidenceScores);
         if (parsed.maxAllowedSemesters) setMaxAllowedSemesters(parsed.maxAllowedSemesters);
+      } else if (parsedImport) {
+        // If an imported prospectus exists, default to it
+        setSelectedProgramId("imported");
+        setTargetCourseId(parsedImport.defaultTarget || parsedImport.courses[parsedImport.courses.length - 1]?.id);
       }
     } catch (e) {
       console.warn("Failed to read from local storage", e);
@@ -141,6 +202,16 @@ export default function App() {
   // Handle Degree Program Switching
   const handleSelectProgram = (programId) => {
     setSelectedProgramId(programId);
+
+    if (programId === "imported" && importedProspectus) {
+      setSelectedTrackId(null);
+      setTargetCourseId(importedProspectus.defaultTarget || importedProspectus.courses[importedProspectus.courses.length - 1]?.id);
+      setCompletedCourseIds([]);
+      setCustomSemesterPlan(null);
+      setIsCycleSimulated(false);
+      return;
+    }
+
     const prog = MSU_NAAWAN_PROGRAMS.find(p => p.id === programId) || MSU_NAAWAN_PROGRAMS[0];
     const tracks = MSU_CAREER_TRACKS[programId] || [];
     const defaultTrack = tracks[0];
@@ -157,6 +228,29 @@ export default function App() {
     setCompletedCourseIds([]);
     setCustomSemesterPlan(null);
     setIsCycleSimulated(false);
+  };
+
+  // Handle student-led prospectus import
+  const handleImportProspectus = (newProspectus) => {
+    setImportedProspectus(newProspectus);
+    try {
+      localStorage.setItem(IMPORTED_PROSPECTUS_KEY, JSON.stringify(newProspectus));
+    } catch (e) {
+      console.warn("Failed to persist imported prospectus", e);
+    }
+
+    setSelectedProgramId("imported");
+    setSelectedTrackId(null);
+    setTargetCourseId(newProspectus.defaultTarget || newProspectus.courses[newProspectus.courses.length - 1]?.id);
+    setCompletedCourseIds([]);
+    setCustomSemesterPlan(null);
+    setIsCycleSimulated(false);
+
+    confetti({
+      particleCount: 160,
+      spread: 80,
+      origin: { y: 0.5 }
+    });
   };
 
   // Handle Track Selection
@@ -241,6 +335,19 @@ export default function App() {
 
   // Reset to default
   const handleResetPlan = () => {
+    if (selectedProgramId === "imported" && importedProspectus) {
+      setTargetCourseId(importedProspectus.defaultTarget || importedProspectus.courses[importedProspectus.courses.length - 1]?.id);
+      setCompletedCourseIds([]);
+      setConfidenceScores({ domain1: 7, domain2: 7, domain3: 6, domain4: 6 });
+      setMaxAllowedSemesters(8);
+      setIsCycleSimulated(false);
+      setCustomSemesterPlan(null);
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch (e) {}
+      return;
+    }
+
     setSelectedProgramId("bsba_marketing");
     setSelectedTrackId("corporate_practicum");
     setTargetCourseId("MKT197");
@@ -259,7 +366,8 @@ export default function App() {
     const exportPayload = {
       version: "ARCH-2026-v2.1",
       exportedAt: new Date().toISOString(),
-      degreeProgram: selectedProgramId,
+      degreeProgram: activeProgramInfo.name,
+      major: activeProgramInfo.major,
       targetGoal: targetCourseId,
       completedCourses: completedCourseIds,
       confidenceScores,
@@ -276,7 +384,7 @@ export default function App() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `MSU_CourseAdvisor_${selectedProgramId}_${targetCourseId}.json`;
+    a.download = `CourseAdvisor_${activeProgramInfo.name.replace(/\s+/g, "_")}_${targetCourseId}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -296,7 +404,7 @@ export default function App() {
 
       {/* Main Content Area */}
       <main style={{ maxWidth: "1400px", margin: "0 auto", padding: "1.5rem", width: "100%", flex: 1 }}>
-        {/* Circular Prerequisite Loop Warning (Spec Section 9 & Flowchart Loop Step) */}
+        {/* Circular Prerequisite Loop Warning (Spec Section 9) */}
         {!scheduleResult.success && scheduleResult.error === "CIRCULAR_DEPENDENCY_DETECTED" && (
           <div
             className="glass-panel fade-in"
@@ -361,6 +469,10 @@ export default function App() {
               onSelectTrack={handleSelectTrack}
               onSelectTargetCourse={handleSelectTargetCourse}
               onUpdateAllowedSemesters={setMaxAllowedSemesters}
+              activeProgramInfo={activeProgramInfo}
+              importedProspectus={importedProspectus}
+              onOpenImportModal={() => setIsImportModalOpen(true)}
+              careerTracks={careerTracks}
             />
 
             {/* Step 2 & 3: Semester Plan Board */}
@@ -477,19 +589,7 @@ export default function App() {
           />
         )}
 
-        {/* Tab 5: System Flowchart & Edge Case Simulator */}
-        {activeTab === "flowchart" && (
-          <div className="fade-in">
-            <SystemFlowchartModal
-              onClose={() => setActiveTab("planner")}
-              onTestCycle={() => setIsCycleSimulated(true)}
-              onResetCycle={() => setIsCycleSimulated(false)}
-              isCycleActive={isCycleSimulated}
-              criticalPathLength={scheduleResult.criticalPathLength}
-              currentSemestersCount={activeSemesters.length}
-            />
-          </div>
-        )}
+
 
         {/* Tab 6: Course Catalog */}
         {activeTab === "catalog" && (
@@ -510,6 +610,14 @@ export default function App() {
           onClose={() => setIsFuzzyModalOpen(false)}
         />
       )}
+
+      {/* Student Prospectus Import Modal */}
+      <ImportProspectusModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onImportProspectus={handleImportProspectus}
+        currentProspectusName={activeProgramInfo.name}
+      />
 
       {/* PWA App Install Banner for PWABuilder / Mobile App Install */}
       <InstallPrompt />

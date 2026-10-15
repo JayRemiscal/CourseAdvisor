@@ -4,7 +4,6 @@ import {
   GitFork, 
   Sliders, 
   BookMarked, 
-  Workflow, 
   Library 
 } from "lucide-react";
 
@@ -14,7 +13,6 @@ export function BottomNav({ activeTab, onTabChange }) {
     { id: "graph", label: "DAG", icon: GitFork },
     { id: "confidence", label: "Sliders", icon: Sliders },
     { id: "transcript", label: "Passed", icon: BookMarked },
-    { id: "flowchart", label: "Pipeline", icon: Workflow },
     { id: "catalog", label: "Catalog", icon: Library }
   ];
 

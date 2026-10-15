@@ -620,6 +620,13 @@ export const MSU_CAREER_TRACKS = {
   ]
 };
 
+export const DEFAULT_CATEGORY_COLOR = {
+  bg: "rgba(99, 102, 241, 0.15)",
+  border: "#6366f1",
+  text: "#a5b4fc",
+  label: "Major Professional"
+};
+
 export const CATEGORY_COLORS = {
   major: { bg: "rgba(99, 102, 241, 0.15)", border: "#6366f1", text: "#a5b4fc", label: "Major Professional" },
   general: { bg: "rgba(148, 163, 184, 0.15)", border: "#94a3b8", text: "#cbd5e1", label: "General Education" },
@@ -630,9 +637,23 @@ export const CATEGORY_COLORS = {
   management: { bg: "rgba(16, 185, 129, 0.15)", border: "#10b981", text: "#6ee7b7", label: "Management & Strategy" },
   research: { bg: "rgba(236, 72, 153, 0.15)", border: "#ec4899", text: "#f472b6", label: "Research Methods" },
   tech: { bg: "rgba(14, 165, 233, 0.15)", border: "#0ea5e9", text: "#7dd3fc", label: "Technology & Analytics" },
+  coding: { bg: "rgba(14, 165, 233, 0.15)", border: "#0ea5e9", text: "#7dd3fc", label: "Programming & Code" },
+  theory: { bg: "rgba(234, 88, 12, 0.15)", border: "#ea580c", text: "#fdba74", label: "Economic Theory" },
   education: { bg: "rgba(168, 85, 247, 0.15)", border: "#a855f7", text: "#c084fc", label: "Professional Education" },
-  capstone: { bg: "rgba(244, 63, 94, 0.15)", border: "#f43f5e", text: "#fda4af", label: "Thesis & Practicum" }
+  capstone: { bg: "rgba(244, 63, 94, 0.15)", border: "#f43f5e", text: "#fda4af", label: "Thesis & Practicum" },
+  elective: { bg: "rgba(168, 85, 247, 0.15)", border: "#a855f7", text: "#c084fc", label: "Elective Course" },
+  default: DEFAULT_CATEGORY_COLOR
 };
+
+export function getCategoryTheme(catKey) {
+  if (catKey && CATEGORY_COLORS[catKey]) {
+    return CATEGORY_COLORS[catKey];
+  }
+  return {
+    ...DEFAULT_CATEGORY_COLOR,
+    label: catKey ? (catKey.charAt(0).toUpperCase() + catKey.slice(1)) : "Course"
+  };
+}
 
 // Export default catalog for fallback
 export const COURSE_CATALOG = MSU_NAAWAN_COURSES.bsba_marketing;
